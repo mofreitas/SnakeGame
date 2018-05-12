@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title></title>
+		<meta charset="utf-8">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css">
+		<script>
+			$(document).ready(function(){
+
+				//Definindo tamanho area jogo
+				var altura = $(window).height();
+				var largura = $("#area_jogo").width();
+
+				largura = largura - largura%20;
+				altura = altura - 40 - altura%20;
+
+				$("#area_jogo").css({"width": largura+"px", "height": altura+"px"});
+
+				//Definindo direções
+				var ESQ = 37;
+				var DIR = 39;
+				var CIM = 40;
+				var BAI = 38;
+
+				var temporizador_especial;
+				var temporizador_comida_especial;
+				var temPonto = true;
+				var jaPressionado = false;
+				var comecou = false;
+				var direcao = DIR;
+				var temporizador;
+				var snake = [new posicao(200, 200), new posicao(180, 200), new posicao(160, 200)];
+				var ponto = new comida(10);
+				var tamanho_vencedor = largura/20 * altura/20 - 1;
+				var pontos = 0;
+				var esta_especial = false;
+				var comida_especial = 0;
+				
+				function posicao(x, y) {
+					this.x = x;
+					this.y = y;				
+				}
+
+
+				//cria comidas
+				function comida(p) {
+					var especial = Math.random();
+
+					if(especial < 0.3) {
+						comida_especial = 1;
+						temporizador_comida_especial = setTimeout(function(){
+							comida_especial = 0;
+						}, 3000);
+					} else if (especial >= 0.3 && especial < 0.8){
+						comida_especial = 2;
+						temporizador_comida_especial = setTimeout(function(){
+							comida_especial = 0;
+						}, 3000);
+					} 
+					else {
+						comida_especial = false;
+					}
+
+					while(true){
+						
+						var x = Math.random()*largura;
+						var y = Math.random()*altura;						
+						this.posX = Math.floor(x-x%20);
+						this.posY = Math.floor(y-y%20);
+						if(!colisaoSnake(this.posX, this.posY)){
+							break;
+						}
+					}
+				}
+				
+				//Obtem direção
+				$(document).keydown(function(event){
+					if([ESQ, DIR, CIM, BAI].includes(event.which)){
+						var nova_direcao = event.which;
+						//impede que vá para direção oposta ou a mesma direcao
+						if(Math.abs(nova_direcao-direcao) != 2 && !jaPressionado){
+							direcao = nova_direcao;
+							jaPressionado = true;
+						}
+					}
+				});
+
+				//Lidar com aperto de butões-------------------
+				$("#play").click(function(){
+					if(!comecou){
+						comecar();
+						comecou = true;
+						$("#play").text("Pausar");
+					}else{
+						pausar();
+						comecou = false;						
+						$("#play").text("Começar");
+					}
+				});
+
+				$("#reset").click(reiniciar);
+				//---------------------------------------------
+
+				function comecar(){
+					$("#area_jogo").empty();
+					$("#area_jogo").append("<p id='pontos' style='position: absolute; top: 5px; left:5px; z-index: 1500'>Pontos: " + pontos.toString() + "</p>");
+					$("#area_jogo").append('<div class="ponto" style="top: '+ ponto.posY.toString() +'px; left: ' + ponto.posX.toString() + 'px;"></div>');
+					for(i = 0; i < snake.length; i++){
+						$("#area_jogo").append('<div class="cobra" style="top: '+ snake[i].y.toString() +'px; left: ' + snake[i].x.toString() + 'px;"></div>');
+					}
+
+					if(esta_especial){
+						temporizador = setTimeout(movimentar, 50);
+					} else {
+						temporizador = setTimeout(movimentar, 150);
+					}
+				}	
+
+				function pausar(){
+					clearTimeout(temporizador);
+				}	
+
+				function reiniciar(){
+					direcao = DIR;
+					clearTimeout(temporizador);
+					snake = [new posicao(200, 200), new posicao(180, 200), new posicao(160, 200)];
+					$("#area_jogo").empty();
+					jaPressionado = false;
+					temPonto = true;
+					comecou = false;	
+					ponto = new comida(10);					
+					$("#play").text("Começar");
+					$("#area_jogo").css({"background-color":"lightgray"});						
+					$("#play").attr("disabled", false);
+					pontos = 0;
+				}	
+
+				function movimentar(){
+					jaPressionado = false;		
+
+					var i;					
+					for(i = snake.length-1; i > 0; i--){
+						snake[i].x = snake[i-1].x;
+						snake[i].y = snake[i-1].y;
+					}
+					
+					//Faz a cabeça da cobra andar uma unidade
+					if(direcao == DIR){
+						snake[0].x += 20; 
+					} else if (direcao == CIM){
+						snake[0].y += 20;
+					} else if (direcao == BAI){
+						snake[0].y -= 20;
+					} else {
+						snake[0].x -= 20;
+					}		
+
+					//Colisão com o ponto							
+					if(colisao(snake[0], ponto)){
+						temPonto = false;
+						$("#area_jogo .ponto").remove();
+						var tamanho = snake.length;						
+						
+						if(comida_especial == 1){
+							pontos += 50;
+							esta_especial = true;
+							temporizador_especial = setTimeout(function(){
+								esta_especial = false;
+							}, 5000);
+							comida_especial = 0;
+							clearTimeout(temporizador_comida_especial);
+						} else if (comida_especial == 2){
+							pontos += 100;
+							comida_especial = 0;
+							clearTimeout(temporizador_comida_especial);
+						}
+						else {
+							pontos += 10;
+						}
+
+						snake.push(new posicao(snake[tamanho-1].x, snake[tamanho-1].y));
+						$("#area_jogo").append('<div class="cobra" style="top: '+ snake[tamanho].y.toString() +'px; left: ' + snake[tamanho].x.toString() + 'px;"></div>');
+						$("#pontos").text("Pontos: "+ pontos.toString());
+					}
+
+					//Reconstroi o ponto se não existir
+					if(!temPonto){
+						ponto = new comida(10);
+						temPonto = true;
+						$("#area_jogo").append('<div class="ponto" style="top: '+ ponto.posY.toString() +'px; left: ' + ponto.posX.toString() + 'px;"></div>');
+					}
+
+					//Colore a comida de acordo com seu tipo
+					if(comida_especial == 1){
+						$("#area_jogo .ponto").css("background-color", "red");
+					} else if (comida_especial == 2){
+						$("#area_jogo .ponto").css("background-color", "cyan");
+					} else {
+						$("#area_jogo .ponto").css("background-color", "yellow");
+					}
+					
+					//Verifica se colidiu com si mesmo ou com a parede
+					if(colisaoSnake(snake[0].x, snake[0].y) || colisaoParede()){
+						clearTimeout(temporizador);
+						perdeu();
+					} 
+					else if(snake.length == tamanho_vencedor){
+						clearTimeout(temporizador);
+						venceu();
+					}
+					else{		
+						$("#area_jogo").prepend('<div class="cobra" style="top: '+ snake[0].y.toString() +'px; left: ' + snake[0].x.toString() + 'px;"></div>');			
+						$(".cobra").last().remove();
+
+						if(esta_especial){
+							temporizador = setTimeout(movimentar, 50);
+						} else {
+							temporizador = setTimeout(movimentar, 150);
+						}
+					}
+
+					function perdeu(){
+						$("#area_jogo").css({"background-color":"gray"});
+						$("#area_jogo").append("<div class='text-center' id='mensagem'><h1>Você Perdeu</h1><h4>Pontos: "+ pontos.toString() +"</h4></div>");
+						$("#play").attr("disabled", true);
+					}
+
+					
+					function venceu(){
+						$("#area_jogo").css({"background-color":"gray"});
+						$("#area_jogo").append("<div class='text-center' id='mensagem'><h1>Você Venceu</h1><h4>Pontos: "+ pontos.toString() +"</h4></div>");
+						$("#play").attr("disabled", true);
+					}
+				}	
+
+				//testa se houve colisão
+				function colisao(obj1, obj2) {
+					if(obj1.x == obj2.posX && obj1.y == obj2.posY)
+						return true;
+					return false;
+				}
+
+				//Teste colisão com a cobra
+				function colisaoSnake(x, y){
+					var i;
+					for(i = 1; i < snake.length; i++){
+						if(x == snake[i].x){
+							if(y == snake[i].y){
+								return true;
+							}
+						}
+					}
+					return false;
+				}
+
+				//Testa colisões em paredes
+				function colisaoParede(){
+					var i;
+					if(snake[0].x >= 0 && snake[0].x < largura){
+						if(snake[0].y >= 0 && snake[0].y < altura){
+							return false;
+						}
+					}
+					return true;
+				}
+			});
+		</script>
+		<style>
+			#area_jogo{
+				position:relative;
+			}
+			
+			.cobra{
+				height: 20px;
+				width: 20px;
+				position: absolute;
+				background-color: blue;
+			}
+
+			.ponto{
+				height: 20px;
+				width: 20px;
+				position: absolute;
+				background-color: yellow;
+			}
+
+			#mensagem{
+				top: 50%; 
+				left: 50%; 
+				transform: translate(-50%, -50%); 
+				color: white; 
+				position: absolute;
+			}
+		</style>
+	</head>
+	<body style="height: 100vh; min-height:200px;">
+		<div class="row" style="height:100%; margin-right: 0px;">
+			<div class="col-sm-3 border">
+				<div class="container-fluid text-center" style="height: 100px; display:flex; justify-content: center; align-items: center;">				
+					<h1>Snake Game</h1>
+				</div>
+				<div class="btn-group d-flex justify-content-center">
+					<button id="play" type="button" class="btn btn-primary">Começar</button>
+					<button id="reset" type="button" class="btn btn-secondary">Reiniciar</button>
+				</div>
+				<div class="container" style="padding-top: 20px;">	
+					<h4>Como jogar</h4>
+					<p>Tente chegar no maior tamanho possível sem colidir em si mesmo nem nas bordas. Para isso
+					você deve comer os quadrados que aparecem:</p>
+					<div class="row">
+						<div class="col-sm-2">
+							<div class="ponto"></div>
+						</div>
+						<p class="col-sm-10">10 pontos</p> 
+					</div>
+					<div class="row">
+						<div class="col-sm-2">
+							<div class="ponto" style="background-color: red"></div>
+						</div>
+						<p class="col-sm-10">50 pontos</p> 
+					</div>
+					<div class="row">
+						<div class="col-sm-2">
+							<div class="ponto" style="background-color: cyan"></div>
+						</div>
+						<p class="col-sm-10">100 pontos</p> 
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-9" style="padding: 20px;">
+				<div id="area_jogo" class="container" style="height: 200px; background-color:lightgray;">
+					<p id="pontos" style="position: absolute; top: 5px; left:5px; z-index: 1500;"></p>
+				</div>				
+			</div>
+		</div>
+	</body>
+</html>
