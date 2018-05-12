@@ -23,6 +23,8 @@
 				var CIM = 40;
 				var BAI = 38;
 
+				var temporizador_negra;
+				var temporizador_comida_negra;
 				var temporizador_especial;
 				var temporizador_comida_especial;
 				var temPonto = true;
@@ -36,6 +38,8 @@
 				var pontos = 0;
 				var esta_especial = false;
 				var comida_especial = 0;
+				var comida_negra = false;
+				var myAudio;
 				
 				function posicao(x, y) {
 					this.x = x;
@@ -47,7 +51,7 @@
 				function comida(p) {
 					var especial = Math.random();
 
-					if(especial < 0.3) {
+					if(especial < 0.3 && !esta_especial) {
 						comida_especial = 1;
 						temporizador_comida_especial = setTimeout(function(){
 							comida_especial = 0;
@@ -57,8 +61,12 @@
 						temporizador_comida_especial = setTimeout(function(){
 							comida_especial = 0;
 						}, 3000);
-					} 
-					else {
+					} else if (especial >= 0.5 && especial < 0.6 && !comida_negra){
+						comida_especial = 3;
+						temporizador_comida_especial = setTimeout(function(){
+							comida_especial = 0;
+						}, 3000);
+					}	else {
 						comida_especial = false;
 					}
 
@@ -131,12 +139,17 @@
 					comecou = false;	
 					ponto = new comida(10);					
 					$("#play").text("Começar");
-					$("#area_jogo").css({"background-color":"lightgray"});						
+					$("#area_jogo").css({"background-color":"lightgray"});
+					$("#area_jogo > #pontos").css("color", "black");						
 					$("#play").attr("disabled", false);
 					pontos = 0;
+					esta_especial = false;
+					comida_negra = false;
+					comida_especial = 0;
 				}	
 
 				function movimentar(){
+
 					jaPressionado = false;		
 
 					var i;					
@@ -160,24 +173,56 @@
 					if(colisao(snake[0], ponto)){
 						temPonto = false;
 						$("#area_jogo .ponto").remove();
-						var tamanho = snake.length;						
+						var tamanho = snake.length;
+						var p = 0;						
 						
 						if(comida_especial == 1){
-							pontos += 50;
+							p += 50;
 							esta_especial = true;
 							temporizador_especial = setTimeout(function(){
 								esta_especial = false;
 							}, 5000);
 							comida_especial = 0;
 							clearTimeout(temporizador_comida_especial);
-						} else if (comida_especial == 2){
-							pontos += 200;
+							var som= new Audio('efeitos_sonoros/sfx_sounds_powerup2.wav');
+							som.play();
+						} 
+						else if (comida_especial == 2){
+							p += 200;
 							comida_especial = 0;
+							clearTimeout(temporizador_comida_especial);			
+							var som= new Audio('efeitos_sonoros/sfx_sounds_interaction14.wav');
+							som.play();				
+						} 
+						else if (comida_especial == 3){
+							p += 100;
+							comida_especial = 0;
+							comida_negra = true;
+							$("#area_jogo").css("background-color", "black");
+							$("#area_jogo > #pontos").css("color", "white");
+							temporizador_negra = setTimeout(function(){
+								comida_negra = false;
+								$("#area_jogo .ponto").css("opacity", 100);
+								$("#area_jogo").css("background-color", "lightgray");
+								$("#area_jogo > #pontos").css("color", "black");
+							}, 10000);
+							var som= new Audio('efeitos_sonoros/sfx_sounds_powerup16.wav');
+							som.play();
+			
 							clearTimeout(temporizador_comida_especial);
 						}
 						else {
-							pontos += 10;
+							p += 20;
+							clearTimeout(temporizador_comida_especial);
+							var som= new Audio('efeitos_sonoros/sfx_sounds_interaction1.wav');
+							som.play();
+
 						}
+
+						esta_especial ? p *= 2 : p ;
+						comida_negra ? p *= 4 : p ;
+					
+						pontos += p;
 
 						snake.push(new posicao(snake[tamanho-1].x, snake[tamanho-1].y));
 						$("#area_jogo").append('<div class="cobra" style="top: '+ snake[tamanho].y.toString() +'px; left: ' + snake[tamanho].x.toString() + 'px;"></div>');
@@ -185,9 +230,12 @@
 					}
 
 					//Reconstroi o ponto se não existir
-					if(!temPonto){
+					if(!temPonto){						
 						ponto = new comida(10);
 						temPonto = true;
+						if(comida_negra){
+							temporizador_comida_negra = setTimeout(esconde_comida, 1000);
+						}
 						$("#area_jogo").append('<div class="ponto" style="top: '+ ponto.posY.toString() +'px; left: ' + ponto.posX.toString() + 'px;"></div>');
 					}
 
@@ -196,6 +244,8 @@
 						$("#area_jogo .ponto").css("background-color", "red");
 					} else if (comida_especial == 2){
 						$("#area_jogo .ponto").css("background-color", "cyan");
+					} else if (comida_especial == 3){
+						$("#area_jogo .ponto").css("background-color", "black");
 					} else {
 						$("#area_jogo .ponto").css("background-color", "yellow");
 					}
@@ -224,6 +274,11 @@
 						$("#area_jogo").css({"background-color":"gray"});
 						$("#area_jogo").append("<div class='text-center' id='mensagem'><h1>Você Perdeu</h1><h4>Pontos: "+ pontos.toString() +"</h4></div>");
 						$("#play").attr("disabled", true);
+						var som= new Audio('efeitos_sonoros/sfx_sounds_impact11.wav');
+						som.play();
+						clearTimeout(temporizador_comida_negra);
+						clearTimeout(temporizador_comida_especial);
+						clearTimeout(temporizador_negra);
 					}
 
 					
@@ -231,6 +286,17 @@
 						$("#area_jogo").css({"background-color":"gray"});
 						$("#area_jogo").append("<div class='text-center' id='mensagem'><h1>Você Venceu</h1><h4>Pontos: "+ pontos.toString() +"</h4></div>");
 						$("#play").attr("disabled", true);
+						var som= new Audio('efeitos_sonoros/sfx_sounds_fanfare1.wav');
+						som.play();
+						clearTimeout(temporizador_comida_negra);
+						clearTimeout(temporizador_comida_especial);
+						clearTimeout(temporizador_negra);						
+					}					
+
+					function esconde_comida(){
+						if(comida_negra){
+							$("#area_jogo .ponto").css("opacity", 0);
+						}
 					}
 				}	
 
@@ -312,19 +378,25 @@
 						<div class="col-sm-2">
 							<div class="ponto"></div>
 						</div>
-						<p class="col-sm-10">10 pontos</p> 
+						<p class="col-sm-10">20 pontos</p> 
 					</div>
 					<div class="row">
 						<div class="col-sm-2">
 							<div class="ponto" style="background-color: red"></div>
 						</div>
-						<p class="col-sm-10">50 pontos</p> 
+						<p class="col-sm-10">50 pontos (Duplica pontos)</p> 
 					</div>
 					<div class="row">
 						<div class="col-sm-2">
 							<div class="ponto" style="background-color: cyan"></div>
 						</div>
 						<p class="col-sm-10">200 pontos</p> 
+					</div>
+					<div class="row">
+						<div class="col-sm-2">
+							<div class="ponto" style="background-color: black"></div>
+						</div>
+						<p class="col-sm-10">400 pontos (Quadruplica pontos)</p> 
 					</div>
 				</div>
 			</div>
