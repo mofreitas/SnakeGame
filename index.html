@@ -52,7 +52,7 @@
 						temporizador_comida_especial = setTimeout(function(){
 							comida_especial = 0;
 						}, 3000);
-					} else if (especial >= 0.3 && especial < 0.8){
+					} else if (especial >= 0.3 && especial < 0.5){
 						comida_especial = 2;
 						temporizador_comida_especial = setTimeout(function(){
 							comida_especial = 0;
@@ -171,7 +171,7 @@
 							comida_especial = 0;
 							clearTimeout(temporizador_comida_especial);
 						} else if (comida_especial == 2){
-							pontos += 100;
+							pontos += 200;
 							comida_especial = 0;
 							clearTimeout(temporizador_comida_especial);
 						}
@@ -324,7 +324,7 @@
 						<div class="col-sm-2">
 							<div class="ponto" style="background-color: cyan"></div>
 						</div>
-						<p class="col-sm-10">100 pontos</p> 
+						<p class="col-sm-10">200 pontos</p> 
 					</div>
 				</div>
 			</div>
